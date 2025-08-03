@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: -8836144856456963261}
   - component: {fileID: 14034981818289685}
   - component: {fileID: -653562429959600034}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Herbivore
   m_TagString: Herbivore
   m_Icon: {fileID: 0}

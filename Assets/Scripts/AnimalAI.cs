@@ -19,7 +19,8 @@ namespace Assets.Scripts
             SeekFood,
             Chase,
             EatAnimal,
-            GetDamage
+            GetDamage,
+            BeGroup
         }
 
         private Dictionary<Action, float> actionWeights = new()
@@ -32,12 +33,14 @@ namespace Assets.Scripts
             { Action.Chase, 1f },
             { Action.EatAnimal, 1f },
             { Action.GetDamage, 1f },
+            { Action.BeGroup, 1f },
         };
 
         public float Hunger { get; private set; } = 0f;
         public float Energy { get; private set; } = 150f;
         public float HP { get; private set; } = 300f;
         public bool IsThreatNearby { get; set; } = false;
+        public bool isRelativeNearby { get; set; } = false;
 
         private float threatCooldown = 5f;
         private float threatTimer = 0f;
@@ -47,6 +50,11 @@ namespace Assets.Scripts
             if (IsThreatNearby)
             {
                 return Action.RunFromThreat;
+            }
+
+            if (isRelativeNearby)
+            {
+                return Action.BeGroup;
             }
 
             actionWeights[Action.EatPlant] = Mathf.Lerp(1f, 10f, Mathf.InverseLerp(30f, 150f, Hunger));
@@ -127,6 +135,10 @@ namespace Assets.Scripts
                 case Action.GetDamage:
                     HP -= 5f;
                     Learn(action, +2.5f);
+                    break;
+                case Action.BeGroup:
+                    Energy -= 1.5f;
+                    Learn(action, +1f);
                     break;
             }
         }

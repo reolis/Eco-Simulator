@@ -1,5 +1,6 @@
 using UnityEngine;
 using Assets.Scripts;
+using System.Collections.Generic;
 
 public class HerbivoreAnimalProcess : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class HerbivoreAnimalProcess : MonoBehaviour
     private float directionChangeTimer = 0f;
     private float directionChangeInterval = 2f;
     private Transform targetPlant;
+    private Vector2 smoothedDirection = Vector2.zero;
 
     public void Initialize(Animal newAnimal, GameObject animalSt, GameObject plantSt)
     {
@@ -100,6 +102,10 @@ public class HerbivoreAnimalProcess : MonoBehaviour
             case AnimalAI.Action.RunFromThreat:
                 animal.CurrentState = Animal.AnimalState.Fleeing;
                 break;
+            case AnimalAI.Action.BeGroup:
+                animal.CurrentState = Animal.AnimalState.Wander;
+                BeGrouped();
+                break;
         }
     }
 
@@ -108,7 +114,7 @@ public class HerbivoreAnimalProcess : MonoBehaviour
         if (animal.CurrentState == Animal.AnimalState.Dying || animal.CurrentState == Animal.AnimalState.Idle)
             return;
 
-        if (animal.CurrentState != Animal.AnimalState.SeekFood && animal.CurrentState != Animal.AnimalState.Fleeing)
+        if (animal.CurrentState != Animal.AnimalState.SeekFood)
         {
             directionChangeTimer += Time.deltaTime;
 
@@ -119,16 +125,16 @@ public class HerbivoreAnimalProcess : MonoBehaviour
             }
         }
 
-        float speedModifier = 1f;
-        if (animal.CurrentState == Animal.AnimalState.Eating)
-            speedModifier = 0.3f;
-        else if (animal.CurrentState == Animal.AnimalState.Fleeing)
-            speedModifier = 1.5f;
+        smoothedDirection = Vector2.Lerp(smoothedDirection, currentDirection, Time.deltaTime * 2f);
 
-        float angle = Mathf.Atan2(currentDirection.y, currentDirection.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, 0, angle), Time.deltaTime * 5f);
+        float angle = Mathf.Atan2(smoothedDirection.y, smoothedDirection.x) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, 0, angle), Time.deltaTime * 2f);
 
-        transform.Translate(currentDirection * animal.Speed * speedModifier * Time.deltaTime, Space.World);
+        float speedModifier = (animal.CurrentState == Animal.AnimalState.Eating) ? 0.2f : 0.5f;
+        Vector2 noise = Random.insideUnitCircle * 0.05f;
+        Vector2 finalDirection = (smoothedDirection + noise).normalized;
+
+        transform.Translate(finalDirection * animal.Speed * speedModifier * Time.deltaTime, Space.World);
         transform.position = ClampPositionToCameraBounds(transform.position);
     }
 
@@ -203,6 +209,44 @@ public class HerbivoreAnimalProcess : MonoBehaviour
 
             Vector2 fleeDir = (Vector2)(transform.position - nearestPredator.position).normalized;
             currentDirection = fleeDir;
+        }
+    }
+
+    private void BeGrouped()
+    {
+        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 10f, 6);
+
+        List<Transform> nearbyAllies = new List<Transform>();
+        foreach (var col in hits)
+        {
+            if (col.transform == this.transform) continue;
+
+            HerbivoreAnimalProcess other = col.GetComponent<HerbivoreAnimalProcess>();
+            if (other != null && other.animal.TypeOfAnimal == AnimalType.Herbivore && !other.animal.IsDead)
+            {
+                nearbyAllies.Add(other.transform);
+            }
+        }
+
+        animal.AI.isRelativeNearby = nearbyAllies.Count >= 2;
+
+        if (nearbyAllies.Count >= 2)
+        {
+            Transform nearest = nearbyAllies[0];
+            float minDist = Vector2.Distance(transform.position, nearest.position);
+
+            foreach (var ally in nearbyAllies)
+            {
+                float dist = Vector2.Distance(transform.position, ally.position);
+                if (dist < minDist)
+                {
+                    nearest = ally;
+                    minDist = dist;
+                }
+            }
+
+            Vector2 dirToAlly = (nearest.position - transform.position).normalized;
+            currentDirection = dirToAlly;
         }
     }
 

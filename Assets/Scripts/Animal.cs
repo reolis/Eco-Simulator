@@ -32,6 +32,7 @@ namespace Assets.Scripts
         public float Y { get; set; }
         public UnityEngine.Transform Target { get; set; }
         public float NutritionValue { get; set; }
+        private float ReproduceTries { get; set; }
 
         public enum AnimalState
         {
@@ -42,7 +43,8 @@ namespace Assets.Scripts
             Fleeing,
             Chasing,
             Reproducing,
-            Dying
+            Dying,
+            Group
         }
 
         public AnimalState CurrentState { get; set; }
@@ -50,7 +52,7 @@ namespace Assets.Scripts
         private System.Random randomParams = new System.Random();
         public AnimalAI AI = new AnimalAI();
         private float stateUpdateTimer = 0f;
-        private float stateUpdateInterval = 1f;
+        private float stateUpdateInterval = 3f;
 
         public Animal(AnimalType type)
         {
@@ -65,6 +67,7 @@ namespace Assets.Scripts
                 VisionField = 15;
                 ReproduceTime = 0;
                 NutritionValue = randomParams.Next(1, 20);
+                ReproduceTries = randomParams.Next(1, 3);
             }
             else if (type is AnimalType.Predatory)
             {
@@ -74,6 +77,7 @@ namespace Assets.Scripts
                 HP = randomParams.Next(50, 200);
                 VisionField = 20;
                 ReproduceTime = 0;
+                ReproduceTries = randomParams.Next(1, 3);
             }
 
             Delta = 0.1f;
@@ -134,12 +138,17 @@ namespace Assets.Scripts
 
         public Animal TryReproduce()
         {
-            if (ReproduceTime < 30f) return null;
+            if (ReproduceTries <= 4)
+            {
+                if (ReproduceTime < 55f) return null;
 
-            ReproduceTime = 0f;
+                ReproduceTime = 0f;
 
-            Animal child = Mutate();
-            return child;
+                Animal child = Mutate();
+                ReproduceTries++;
+                return child;
+            }
+            return null;
         }
 
         public float BeEaten()

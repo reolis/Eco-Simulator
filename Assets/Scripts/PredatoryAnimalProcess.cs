@@ -12,6 +12,7 @@ public class PredatoryAnimalProcess : MonoBehaviour
     private float directionChangeTimer = 0f;
     private float directionChangeInterval = 2f;
     private Transform targetAnimal;
+    private Vector2 smoothedDirection = Vector2.zero;
 
     public void Initialize(Animal newAnimal, GameObject animalSt, GameObject herbivoreSt)
     {
@@ -117,11 +118,16 @@ public class PredatoryAnimalProcess : MonoBehaviour
             }
         }
 
-        float angle = Mathf.Atan2(currentDirection.y, currentDirection.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, 0, angle), Time.deltaTime * 5f);
+        smoothedDirection = Vector2.Lerp(smoothedDirection, currentDirection, Time.deltaTime * 2f);
 
-        float speedModifier = (animal.CurrentState == Animal.AnimalState.Eating) ? 0.3f : 1f;
-        transform.Translate(currentDirection * animal.Speed * speedModifier * Time.deltaTime, Space.World);
+        float angle = Mathf.Atan2(smoothedDirection.y, smoothedDirection.x) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, 0, angle), Time.deltaTime * 2f);
+
+        float speedModifier = (animal.CurrentState == Animal.AnimalState.Eating) ? 0.2f : 0.5f;
+        Vector2 noise = Random.insideUnitCircle * 0.05f;
+        Vector2 finalDirection = (smoothedDirection + noise).normalized;
+
+        transform.Translate(finalDirection * animal.Speed * speedModifier * Time.deltaTime, Space.World);
         transform.position = ClampPositionToCameraBounds(transform.position);
     }
 

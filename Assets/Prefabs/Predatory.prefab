@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: -336896892711877098}
   - component: {fileID: -4083583030008944795}
   - component: {fileID: 8551946141175727550}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Predatory
   m_TagString: Predatory
   m_Icon: {fileID: 0}
