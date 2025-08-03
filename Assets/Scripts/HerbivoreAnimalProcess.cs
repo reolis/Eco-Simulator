@@ -32,7 +32,7 @@ public class HerbivoreAnimalProcess : MonoBehaviour
         animal.Delta = delta;
         animal.UpdateStates(delta);
 
-        CheckForThreats();  // проверяем угрозы
+        CheckForThreats();
 
         Animal child = animal.TryReproduce();
         if (child != null)
@@ -129,6 +129,7 @@ public class HerbivoreAnimalProcess : MonoBehaviour
         transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, 0, angle), Time.deltaTime * 5f);
 
         transform.Translate(currentDirection * animal.Speed * speedModifier * Time.deltaTime, Space.World);
+        transform.position = ClampPositionToCameraBounds(transform.position);
     }
 
     private void TryEatNearbyPlant()
@@ -203,5 +204,17 @@ public class HerbivoreAnimalProcess : MonoBehaviour
             Vector2 fleeDir = (Vector2)(transform.position - nearestPredator.position).normalized;
             currentDirection = fleeDir;
         }
+    }
+
+    private Vector2 ClampPositionToCameraBounds(Vector2 pos)
+    {
+        Camera cam = Camera.main;
+        Vector2 min = cam.ViewportToWorldPoint(new Vector2(0, 0));
+        Vector2 max = cam.ViewportToWorldPoint(new Vector2(1, 1));
+
+        pos.x = Mathf.Clamp(pos.x, min.x, max.x);
+        pos.y = Mathf.Clamp(pos.y, min.y, max.y);
+
+        return pos;
     }
 }

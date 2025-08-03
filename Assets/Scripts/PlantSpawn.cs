@@ -8,22 +8,12 @@ public class PlantSpawn : MonoBehaviour
     public GameObject PlantPrefab;
     public int maxNumberOfPlants = 100;
     public float spawnRadius = 10f;
-    public float spawnInterval = 1.5f;
+    public float spawnInterval = 0.1f;
     private List<PlantView> plants = new();
 
     void Start()
     {
-        for (int i = 0; i < 50; i++)
-        {
-            Vector3 spawnPos = transform.position + Random.insideUnitSphere * spawnRadius;
-
-            GameObject plantGO = Instantiate(PlantPrefab, spawnPos, Quaternion.identity);
-            PlantView plantView = plantGO.GetComponent<PlantView>();
-            plantView.Initialize(new Plant());
-
-            plants.Add(plantView);
-        }
-
+        for (int i = 0; i < 50; i++) SpawnPlant();
         StartCoroutine(SpawnPlantsOverTime());
     }
 
@@ -31,20 +21,20 @@ public class PlantSpawn : MonoBehaviour
     {
         while (true)
         {
-            if (plants.Count < maxNumberOfPlants)
+            int missingPlants = maxNumberOfPlants - plants.Count;
+            for (int i = 0; i < missingPlants; i++)
             {
-                Vector3 spawnPos = transform.position + Random.insideUnitSphere * spawnRadius;
-                spawnPos.z = -1;
-
-                GameObject plantGO = Instantiate(PlantPrefab, spawnPos, Quaternion.identity);
-                PlantView plantView = plantGO.GetComponent<PlantView>();
-                plantView.Initialize(new Plant());
-
-                plants.Add(plantView);
+                SpawnPlant();
             }
 
             yield return new WaitForSeconds(spawnInterval);
         }
+    }
+
+    bool IsWithinBounds(Vector3 position)
+    {
+        Vector3 viewportPos = Camera.main.WorldToViewportPoint(position);
+        return viewportPos.x >= 0 && viewportPos.x <= 1 && viewportPos.y >= 0 && viewportPos.y <= 1;
     }
 
     void Update()
@@ -73,5 +63,18 @@ public class PlantSpawn : MonoBehaviour
                 plants.RemoveAt(i);
             }
         }
+    }
+
+    private void SpawnPlant()
+    {
+        Vector3 spawnPos = transform.position + Random.insideUnitSphere * spawnRadius;
+        spawnPos.z = -1;
+
+        if (!IsWithinBounds(spawnPos)) return;
+
+        GameObject plantGO = Instantiate(PlantPrefab, spawnPos, Quaternion.identity);
+        PlantView plantView = plantGO.GetComponent<PlantView>();
+        plantView.Initialize(new Plant());
+        plants.Add(plantView);
     }
 }

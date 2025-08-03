@@ -14,7 +14,7 @@ public class PredatorySpawn : MonoBehaviour
     {
         for (int i = 0; i < count; i++)
         {
-            Vector2 pos = (Vector2)transform.position + Random.insideUnitCircle * radius;
+            Vector2 pos = GetRandomPositionWithinCamera();
             GameObject animalGO = Instantiate(predatoryPrefab, pos, Quaternion.identity);
 
             PredatoryAnimalProcess process = animalGO.GetComponent<PredatoryAnimalProcess>();
@@ -22,5 +22,16 @@ public class PredatorySpawn : MonoBehaviour
 
             spawned.Add(animalGO);
         }
+    }
+
+    private Vector2 GetRandomPositionWithinCamera()
+    {
+        Camera cam = Camera.main;
+        Vector2 min = cam.ViewportToWorldPoint(new Vector2(0, 0));
+        Vector2 max = cam.ViewportToWorldPoint(new Vector2(1, 1));
+
+        float x = Random.Range(min.x, max.x);
+        float y = Random.Range(min.y, max.y);
+        return new Vector2(x, y);
     }
 }

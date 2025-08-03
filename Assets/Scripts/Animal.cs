@@ -150,5 +150,14 @@ namespace Assets.Scripts
             Die();
             return nutrition;
         }
+
+        public void TakeDamage(float amount)
+        {
+            HP -= amount;
+            if (HP <= 0)
+            {
+                Die();
+            }
+        }
     }
 }

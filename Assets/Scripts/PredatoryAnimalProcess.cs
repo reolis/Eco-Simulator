@@ -122,19 +122,28 @@ public class PredatoryAnimalProcess : MonoBehaviour
 
         float speedModifier = (animal.CurrentState == Animal.AnimalState.Eating) ? 0.3f : 1f;
         transform.Translate(currentDirection * animal.Speed * speedModifier * Time.deltaTime, Space.World);
+        transform.position = ClampPositionToCameraBounds(transform.position);
     }
 
     private void TryEatNearbyAnimal()
     {
-        Collider2D[] nearby = Physics2D.OverlapCircleAll(transform.position, 0.5f);
-        foreach (var col in nearby)
+        Collider[] nearby = Physics.OverlapSphere(transform.position, 2f);
+
+        foreach (var collider in nearby)
         {
-            HerbivoreView animalView = col.GetComponent<HerbivoreView>();
-            if (animalView != null)
+            HerbivoreView prey = collider.GetComponent<HerbivoreView>();
+            if (prey != null)
             {
-                float nutrition = animalView.BeEaten();
-                animal.Hunger = Mathf.Max(0f, animal.Hunger - nutrition);
-                animal.CurrentState = Animal.AnimalState.Eating;
+                if (!prey.AnimalModel.IsDead)
+                {
+                    prey.ReceiveAttack(150f);
+                }
+
+                if (prey.AnimalModel.IsDead)
+                {
+                    float nutrition = prey.BeEaten();
+                }
+
                 break;
             }
         }
@@ -171,5 +180,17 @@ public class PredatoryAnimalProcess : MonoBehaviour
             animal.CurrentState = Animal.AnimalState.Wander;
             currentDirection = Random.insideUnitCircle.normalized;
         }
+    }
+
+    private Vector2 ClampPositionToCameraBounds(Vector2 pos)
+    {
+        Camera cam = Camera.main;
+        Vector2 min = cam.ViewportToWorldPoint(new Vector2(0, 0));
+        Vector2 max = cam.ViewportToWorldPoint(new Vector2(1, 1));
+
+        pos.x = Mathf.Clamp(pos.x, min.x, max.x);
+        pos.y = Mathf.Clamp(pos.y, min.y, max.y);
+
+        return pos;
     }
 }

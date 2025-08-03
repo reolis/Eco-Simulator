@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Android.Gradle.Manifest;
 using UnityEngine;
 
 namespace Assets.Scripts
@@ -17,7 +18,8 @@ namespace Assets.Scripts
             Sleep,
             SeekFood,
             Chase,
-            EatAnimal
+            EatAnimal,
+            GetDamage
         }
 
         private Dictionary<Action, float> actionWeights = new()
@@ -29,12 +31,16 @@ namespace Assets.Scripts
             { Action.SeekFood, 1f },
             { Action.Chase, 1f },
             { Action.EatAnimal, 1f },
+            { Action.GetDamage, 1f },
         };
 
         public float Hunger { get; private set; } = 0f;
         public float Energy { get; private set; } = 150f;
         public float HP { get; private set; } = 300f;
         public bool IsThreatNearby { get; set; } = false;
+
+        private float threatCooldown = 5f;
+        private float threatTimer = 0f;
 
         public Action DecideAction()
         {
@@ -67,6 +73,23 @@ namespace Assets.Scripts
         {
             Hunger += deltaTime * 5;
             Energy -= deltaTime * 3;
+
+            if (IsThreatNearby)
+            {
+                threatTimer += deltaTime;
+                if (threatTimer > threatCooldown)
+                {
+                    IsThreatNearby = false;
+                    threatTimer = 0f;
+                }
+            }
+        }
+
+        public void TakeDamage(float amount)
+        {
+            HP -= amount;
+            IsThreatNearby = true;
+            Learn(Action.RunFromThreat, +2f);
         }
 
         public void PerformAction(Action action)
@@ -100,6 +123,10 @@ namespace Assets.Scripts
                 case Action.EatAnimal:
                     Energy -= 20f;
                     Learn(action, +2f);
+                    break;
+                case Action.GetDamage:
+                    HP -= 5f;
+                    Learn(action, +2.5f);
                     break;
             }
         }
