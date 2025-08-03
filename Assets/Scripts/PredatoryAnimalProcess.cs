@@ -1,25 +1,32 @@
-using UnityEngine;
 using Assets.Scripts;
+using UnityEngine;
 
-public class HerbivoreAnimalProcess : MonoBehaviour
+public class PredatoryAnimalProcess : MonoBehaviour
 {
     private Animal animal;
-    private GameObject animalPrefab, plantPrefab;
+    private GameObject animalPrefab, targetPrefab;
     private float timeSinceLastDecision = 0f;
     private float decisionInterval = 1f;
 
     private Vector2 currentDirection = Vector2.zero;
     private float directionChangeTimer = 0f;
     private float directionChangeInterval = 2f;
-    private Transform targetPlant;
+    private Transform targetAnimal;
 
-    public void Initialize(Animal newAnimal, GameObject animalSt, GameObject plantSt)
+    public void Initialize(Animal newAnimal, GameObject animalSt, GameObject herbivoreSt)
     {
         animal = newAnimal;
         animalPrefab = animalSt;
-        plantPrefab = plantSt;
+        targetPrefab = herbivoreSt;
     }
 
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
     void Update()
     {
         if (animal == null || animal.IsDead)
@@ -32,24 +39,23 @@ public class HerbivoreAnimalProcess : MonoBehaviour
         animal.Delta = delta;
         animal.UpdateStates(delta);
 
-        CheckForThreats();  // проверяем угрозы
-
         Animal child = animal.TryReproduce();
         if (child != null)
         {
             Vector3 spawnPos = transform.position + (Vector3)Random.insideUnitCircle.normalized * 1f;
             GameObject childGO = Instantiate(animalPrefab, spawnPos, Quaternion.identity);
 
-            HerbivoreAnimalProcess childProcess = childGO.GetComponent<HerbivoreAnimalProcess>();
-            childProcess.Initialize(child, animalPrefab, plantPrefab);
+            PredatoryAnimalProcess childProcess = childGO.GetComponent<PredatoryAnimalProcess>();
+            childProcess.Initialize(child, animalPrefab, targetPrefab);
         }
 
-        if (animal.CurrentState == Animal.AnimalState.SeekFood && targetPlant != null)
+        if ((animal.CurrentState == Animal.AnimalState.SeekFood || animal.CurrentState ==
+            Animal.AnimalState.Chasing) && targetAnimal != null)
         {
-            float dist = Vector2.Distance(transform.position, targetPlant.position);
+            float dist = Vector2.Distance(transform.position, targetAnimal.position);
             if (dist <= 0.5f)
             {
-                ExecuteAction(AnimalAI.Action.EatPlant);
+                ExecuteAction(AnimalAI.Action.EatAnimal);
             }
         }
 
@@ -58,18 +64,13 @@ public class HerbivoreAnimalProcess : MonoBehaviour
         if (timeSinceLastDecision >= decisionInterval)
         {
             AnimalAI.Action next;
-
-            if (animal.AI.IsThreatNearby)
+            if (animal.TypeOfAnimal == AnimalType.Predatory && animal.Hunger > 65)
             {
-                next = AnimalAI.Action.RunFromThreat;
-            }
-            else if (animal.TypeOfAnimal == AnimalType.Herbivore && animal.Hunger > 55)
-            {
-                next = AnimalAI.Action.SeekFood;
+                next = AnimalAI.Action.Chase;
             }
             else
             {
-                next = AnimalAI.Action.Wander;
+                next = AnimalAI.Action.SeekFood;
             }
 
             ExecuteAction(next);
@@ -89,16 +90,13 @@ public class HerbivoreAnimalProcess : MonoBehaviour
             case AnimalAI.Action.Sleep:
                 animal.CurrentState = Animal.AnimalState.Idle;
                 break;
-            case AnimalAI.Action.EatPlant:
+            case AnimalAI.Action.EatAnimal:
                 animal.CurrentState = Animal.AnimalState.Eating;
-                TryEatNearbyPlant();
+                TryEatNearbyAnimal();
                 break;
             case AnimalAI.Action.SeekFood:
                 animal.CurrentState = Animal.AnimalState.SeekFood;
                 SeekFood();
-                break;
-            case AnimalAI.Action.RunFromThreat:
-                animal.CurrentState = Animal.AnimalState.Fleeing;
                 break;
         }
     }
@@ -108,7 +106,7 @@ public class HerbivoreAnimalProcess : MonoBehaviour
         if (animal.CurrentState == Animal.AnimalState.Dying || animal.CurrentState == Animal.AnimalState.Idle)
             return;
 
-        if (animal.CurrentState != Animal.AnimalState.SeekFood && animal.CurrentState != Animal.AnimalState.Fleeing)
+        if (animal.CurrentState != Animal.AnimalState.SeekFood)
         {
             directionChangeTimer += Time.deltaTime;
 
@@ -119,27 +117,22 @@ public class HerbivoreAnimalProcess : MonoBehaviour
             }
         }
 
-        float speedModifier = 1f;
-        if (animal.CurrentState == Animal.AnimalState.Eating)
-            speedModifier = 0.3f;
-        else if (animal.CurrentState == Animal.AnimalState.Fleeing)
-            speedModifier = 1.5f;
-
         float angle = Mathf.Atan2(currentDirection.y, currentDirection.x) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, 0, angle), Time.deltaTime * 5f);
 
+        float speedModifier = (animal.CurrentState == Animal.AnimalState.Eating) ? 0.3f : 1f;
         transform.Translate(currentDirection * animal.Speed * speedModifier * Time.deltaTime, Space.World);
     }
 
-    private void TryEatNearbyPlant()
+    private void TryEatNearbyAnimal()
     {
         Collider2D[] nearby = Physics2D.OverlapCircleAll(transform.position, 0.5f);
         foreach (var col in nearby)
         {
-            PlantView plantView = col.GetComponent<PlantView>();
-            if (plantView != null)
+            HerbivoreView animalView = col.GetComponent<HerbivoreView>();
+            if (animalView != null)
             {
-                float nutrition = plantView.BeEaten();
+                float nutrition = animalView.BeEaten();
                 animal.Hunger = Mathf.Max(0f, animal.Hunger - nutrition);
                 animal.CurrentState = Animal.AnimalState.Eating;
                 break;
@@ -152,56 +145,31 @@ public class HerbivoreAnimalProcess : MonoBehaviour
         Collider2D[] nearby = Physics2D.OverlapCircleAll(transform.position, animal.VisionField);
 
         float minDist = float.MaxValue;
-        targetPlant = null;
+        targetAnimal = null;
 
         foreach (var col in nearby)
         {
-            PlantView plant = col.GetComponent<PlantView>();
-            if (plant != null)
+            HerbivoreView target = col.GetComponent<HerbivoreView>();
+            if (target != null)
             {
-                float dist = Vector2.Distance(transform.position, plant.transform.position);
+                float dist = Vector2.Distance(transform.position, target.transform.position);
                 if (dist < minDist)
                 {
                     minDist = dist;
-                    targetPlant = plant.transform;
+                    targetAnimal = target.transform;
                 }
             }
         }
 
-        if (targetPlant != null)
+        if (targetAnimal != null)
         {
-            Vector2 dir = (targetPlant.position - transform.position).normalized;
+            Vector2 dir = (targetAnimal.position - transform.position).normalized;
             currentDirection = dir;
         }
         else
         {
             animal.CurrentState = Animal.AnimalState.Wander;
             currentDirection = Random.insideUnitCircle.normalized;
-        }
-    }
-
-    private void CheckForThreats()
-    {
-        Collider2D[] predators = Physics2D.OverlapCircleAll(transform.position, 5f, 0);
-        animal.AI.IsThreatNearby = predators.Length > 0;
-
-        if (predators.Length > 0)
-        {
-            Transform nearestPredator = predators[0].transform;
-            float minDist = Vector2.Distance(transform.position, nearestPredator.position);
-
-            foreach (var pred in predators)
-            {
-                float dist = Vector2.Distance(transform.position, pred.transform.position);
-                if (dist < minDist)
-                {
-                    minDist = dist;
-                    nearestPredator = pred.transform;
-                }
-            }
-
-            Vector2 fleeDir = (Vector2)(transform.position - nearestPredator.position).normalized;
-            currentDirection = fleeDir;
         }
     }
 }

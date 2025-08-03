@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
+using static UnityEngine.RuleTile.TilingRuleOutput;
 
 namespace Assets.Scripts
 {
@@ -29,7 +30,8 @@ namespace Assets.Scripts
         public float Delta {  get; set; }
         public float X { get; set; }
         public float Y { get; set; }
-        public Transform Target { get; set; }
+        public UnityEngine.Transform Target { get; set; }
+        public float NutritionValue { get; set; }
 
         public enum AnimalState
         {
@@ -46,7 +48,7 @@ namespace Assets.Scripts
         public AnimalState CurrentState { get; set; }
 
         private System.Random randomParams = new System.Random();
-        AnimalAI AI = new AnimalAI();
+        public AnimalAI AI = new AnimalAI();
         private float stateUpdateTimer = 0f;
         private float stateUpdateInterval = 1f;
 
@@ -62,6 +64,7 @@ namespace Assets.Scripts
                 HP = randomParams.Next(100, 300);
                 VisionField = 15;
                 ReproduceTime = 0;
+                NutritionValue = randomParams.Next(1, 20);
             }
             else if (type is AnimalType.Predatory)
             {
@@ -131,12 +134,21 @@ namespace Assets.Scripts
 
         public Animal TryReproduce()
         {
-            if (ReproduceTime < 20f) return null;
+            if (ReproduceTime < 30f) return null;
 
             ReproduceTime = 0f;
 
             Animal child = Mutate();
             return child;
+        }
+
+        public float BeEaten()
+        {
+            if (IsDead) return 0f;
+
+            float nutrition = NutritionValue * Age;
+            Die();
+            return nutrition;
         }
     }
 }

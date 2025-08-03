@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: -4511730217887648313}
   - component: {fileID: -8836144856456963261}
   - component: {fileID: 14034981818289685}
+  - component: {fileID: -653562429959600034}
   m_Layer: 0
   m_Name: Herbivore
   m_TagString: Herbivore
@@ -165,3 +166,15 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!114 &-653562429959600034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6815154463100906975}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12097fbe58df8a847a957793135118cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
