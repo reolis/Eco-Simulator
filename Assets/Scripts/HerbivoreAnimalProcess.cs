@@ -1,6 +1,8 @@
 using UnityEngine;
 using Assets.Scripts;
 using System.Collections.Generic;
+using UnityEditor.Animations;
+using System.Collections;
 
 public class HerbivoreAnimalProcess : MonoBehaviour
 {
@@ -15,6 +17,8 @@ public class HerbivoreAnimalProcess : MonoBehaviour
     private Transform targetPlant;
     private Vector2 smoothedDirection = Vector2.zero;
 
+    public Animator controller;
+
     public void Initialize(Animal newAnimal, GameObject animalSt, GameObject plantSt)
     {
         animal = newAnimal;
@@ -22,11 +26,19 @@ public class HerbivoreAnimalProcess : MonoBehaviour
         plantPrefab = plantSt;
     }
 
+    private IEnumerator DelayedDestroy()
+    {
+        yield return new WaitForSeconds(5f);
+        Destroy(gameObject);
+    }
+
     void Update()
     {
         if (animal == null || animal.IsDead)
         {
-            Destroy(gameObject);
+            AnimateDeath(true);
+
+            StartCoroutine(DelayedDestroy());
             return;
         }
 
@@ -101,10 +113,6 @@ public class HerbivoreAnimalProcess : MonoBehaviour
                 break;
             case AnimalAI.Action.RunFromThreat:
                 animal.CurrentState = Animal.AnimalState.Fleeing;
-                break;
-            case AnimalAI.Action.BeGroup:
-                animal.CurrentState = Animal.AnimalState.Wander;
-                BeGrouped();
                 break;
         }
     }
@@ -212,42 +220,21 @@ public class HerbivoreAnimalProcess : MonoBehaviour
         }
     }
 
-    private void BeGrouped()
+    public void AnimateDeath(bool isDie)
     {
-        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 10f, 6);
+        if (controller == null) return;
 
-        List<Transform> nearbyAllies = new List<Transform>();
-        foreach (var col in hits)
+        if (isDie)
         {
-            if (col.transform == this.transform) continue;
-
-            HerbivoreAnimalProcess other = col.GetComponent<HerbivoreAnimalProcess>();
-            if (other != null && other.animal.TypeOfAnimal == AnimalType.Herbivore && !other.animal.IsDead)
-            {
-                nearbyAllies.Add(other.transform);
-            }
+            controller.SetBool("IsDie", true);
+            StartCoroutine(ResetDeathFlag());
         }
+    }
 
-        animal.AI.isRelativeNearby = nearbyAllies.Count >= 2;
-
-        if (nearbyAllies.Count >= 2)
-        {
-            Transform nearest = nearbyAllies[0];
-            float minDist = Vector2.Distance(transform.position, nearest.position);
-
-            foreach (var ally in nearbyAllies)
-            {
-                float dist = Vector2.Distance(transform.position, ally.position);
-                if (dist < minDist)
-                {
-                    nearest = ally;
-                    minDist = dist;
-                }
-            }
-
-            Vector2 dirToAlly = (nearest.position - transform.position).normalized;
-            currentDirection = dirToAlly;
-        }
+    private IEnumerator ResetDeathFlag()
+    {
+        yield return new WaitForSeconds(3f);
+        controller.SetBool("IsDie", false);
     }
 
     private Vector2 ClampPositionToCameraBounds(Vector2 pos)
